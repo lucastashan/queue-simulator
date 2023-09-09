@@ -51,9 +51,9 @@ class QueueSimulator():
     def next_random(self):
         self.iterations -= 1
 
-        a = 832263
-        M = 65536
-        c = 506952111
+        a = 1103515245
+        M = 16777216
+        c = 12820163
         self.seed = ((a * self.seed + c) % M)
         return self.seed / M
 

@@ -17,6 +17,7 @@ class QueueSimulator():
         self.number_servers = None
         self.capacity = None
         self.times = None
+        self.loss = 0
 
         self.global_time = 0
         self.queue = 0
@@ -53,15 +54,13 @@ class QueueSimulator():
         a = 832263
         M = 65536
         c = 506952111
-        self.seed = ((a * self.seed + c) % M) / M
-        return self.seed
+        self.seed = ((a * self.seed + c) % M)
+        return self.seed / M
 
     def random_between(self, a, b):
-        # return round((b - a) * self.next_random() + a, 4)
         return (b - a) * self.next_random() + a
 
     def exit_schedule(self):
-        # exit_event = Event('exit', round(self.global_time + self.random_between(self.min_service, self.max_service), 4))
         exit_event = Event('exit', self.global_time + self.random_between(self.min_service, self.max_service))
         self.insert_event(exit_event)
 
@@ -74,7 +73,6 @@ class QueueSimulator():
             self.exit_schedule()
 
     def arrival_schedule(self):
-        # entry_event = Event('arrival', round(self.global_time + self.random_between(self.min_arrival, self.max_arrival), 4))
         entry_event = Event('arrival', self.global_time + self.random_between(self.min_arrival, self.max_arrival))
         self.insert_event(entry_event)
 
@@ -86,6 +84,8 @@ class QueueSimulator():
             self.queue += 1
             if self.queue <= 1:
                 self.exit_schedule()
+        else:
+            self.loss += 1
         self.arrival_schedule()
 
     def __argument_parsing(self):
@@ -114,6 +114,7 @@ def main():
     for queue in queues:
         print('Times: {}'.format(queue.times))
         print('Total time: {}'.format(round(queue.global_time, 4)))
+        print('loss: {}'.format(queue.loss))
         print()
 
     average_times = [0] * (queues[0].capacity + 1)

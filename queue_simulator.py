@@ -27,6 +27,12 @@ class QueueSimulator():
         self.scheduler = []
         self.seed = seed
 
+        # queue2
+        self.min_service2 = 1
+        self.max_service2 = 3
+        self.queue2 = 0
+        self.times2 = [0,0,0,0,0]
+
         self.__argument_parsing()
 
         self.arrival(3.0)
@@ -35,6 +41,8 @@ class QueueSimulator():
             next_event = self.scheduler.pop(0)
             if next_event.event_type == 'arrival':
                 self.arrival(next_event.time)
+            elif next_event.event_type == 'passage':
+                self.passage_event(next_event.time)
             else:
                 self.exit(next_event.time)
 
@@ -62,15 +70,17 @@ class QueueSimulator():
 
     def exit_schedule(self):
         exit_event = Event('exit', self.global_time +
-                           self.random_between(self.min_service, self.max_service))
+                           self.random_between(self.min_service2, self.max_service2))
         self.insert_event(exit_event)
 
     def exit(self, time):
         self.times[self.queue] += (time - self.global_time)
+        self.times2[self.queue2] += (time - self.global_time)
         self.global_time = time
 
-        self.queue -= 1
-        if self.queue >= self.number_servers:
+        self.queue2 -= 1
+        # 5 e o tamanho da fila 2
+        if self.queue2 >= 5:
             self.exit_schedule()
 
     def arrival_schedule(self):
@@ -80,15 +90,32 @@ class QueueSimulator():
 
     def arrival(self, time):
         self.times[self.queue] += (time - self.global_time)
+        self.times2[self.queue2] += (time - self.global_time)
         self.global_time = time
 
         if self.queue < self.capacity:
             self.queue += 1
             if self.queue <= self.number_servers:
-                self.exit_schedule()
+                self.passage_schedule()
         else:
             self.loss += 1
         self.arrival_schedule()
+
+    def passage_schedule(self):
+        passage_event = Event('passage', self.global_time +
+                              self.random_between(self.min_service, self.max_service))
+        self.insert_event(passage_event)
+
+    def passage_event(self, time):
+        self.times[self.queue] += (time - self.global_time)
+        self.times2[self.queue2] += (time - self.global_time)
+        self.global_time = time
+        self.queue -= 1
+        if self.queue2 < 5:
+            self.queue2 += 1
+
+        self.exit_schedule()
+
 
     def __argument_parsing(self):
         """! ArgumentParser routine"""
@@ -120,21 +147,27 @@ def main():
 
     i = 1
     for queue in queues:
-        print('Queue :{}'.format(i))
+        print('Queue 1:{}'.format(i))
         print(' Times: {}'.format(queue.times))
         print(' Total time: {}'.format(round(queue.global_time, 4)))
         print(' loss: {}'.format(queue.loss))
         print()
+        print('Queue 2')
+        print(' Times: {}'.format(queue.times2))
+        # print(' Total time: {}'.format(round(queue.global_time, 4)))
+        # print(' loss: {}'.format(queue.loss))
+        print()
+        print('=' * 50)
         i += 1
 
-    average_times = [0] * (queues[0].capacity + 1)
-    for i in range(len(average_times)):
-        for queue in queues:
-            average_times[i] += queue.times[i]
-            average_times[i] = round((average_times[i] / len(queues)), 4)
+    # average_times = [0] * (queues[0].capacity + 1)
+    # for i in range(len(average_times)):
+    #     for queue in queues:
+    #         average_times[i] += queue.times[i]
+    #         average_times[i] = round((average_times[i] / len(queues)), 4)
 
-    print('Average times: {}'.format(average_times))
-    print('Average total time: {}'.format(round(sum(average_times), 4)))
+    # print('Average times: {}'.format(average_times))
+    # print('Average total time: {}'.format(round(sum(average_times), 4)))
 
 
 if __name__ == '__main__':

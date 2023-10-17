@@ -28,10 +28,9 @@ class QueueSimulator():
         self.seed = seed
 
         # queue2
-        self.min_service2 = 1
-        self.max_service2 = 3
         self.queue2 = 0
         self.times2 = [0,0,0,0,0]
+        self.loss2 = 0
 
         self.__argument_parsing()
 
@@ -48,6 +47,7 @@ class QueueSimulator():
 
         # all valeu with 4 decimal places
         self.times = [round(time, 4) for time in self.times]
+        self.times2 = [round(time, 4) for time in self.times2]
 
     def insert_event(self, event):
         for i in range(len(self.scheduler)):
@@ -79,8 +79,7 @@ class QueueSimulator():
         self.global_time = time
 
         self.queue2 -= 1
-        # 5 e o tamanho da fila 2
-        if self.queue2 >= 5:
+        if self.queue2 >= self.number_servers2:
             self.exit_schedule()
 
     def arrival_schedule(self):
@@ -111,10 +110,14 @@ class QueueSimulator():
         self.times2[self.queue2] += (time - self.global_time)
         self.global_time = time
         self.queue -= 1
-        if self.queue2 < 5:
+        if self.queue >= self.number_servers:
+            self.passage_schedule()
+        if self.queue2 < self.capacity2:
             self.queue2 += 1
-
-        self.exit_schedule()
+            if self.queue2 <= self.number_servers2:
+                self.exit_schedule()
+        else:
+            self.loss2 += 1
 
 
     def __argument_parsing(self):
@@ -124,11 +127,11 @@ class QueueSimulator():
         parser.add_argument('-a', '--average-arrival',
                             nargs='+', type=int, help='Average arrival time')
         parser.add_argument('-s', '--average-service',
-                            nargs='+', type=int, help='Average service time')
-        parser.add_argument('-n', '--number-servers',
-                            type=int, help='Number of servers')
-        parser.add_argument('-c', '--capacity', type=int,
-                            help='Capacity of the queue')
+                            nargs='+', type=int, help='Average service time for queue 1 and 2')
+        parser.add_argument('-n', '--number-servers', nargs='+',
+                            type=int, help='Number of servers for queue 1 and 2')
+        parser.add_argument('-c', '--capacity', nargs='+', type=int,
+                            help='Capacity of the queue 1 and 2')
 
         args = parser.parse_args()
 
@@ -136,9 +139,14 @@ class QueueSimulator():
         self.max_arrival = args.average_arrival[1]
         self.min_service = args.average_service[0]
         self.max_service = args.average_service[1]
-        self.number_servers = args.number_servers
-        self.capacity = args.capacity
+        self.number_servers = args.number_servers[0]
+        self.capacity = args.capacity[0]
         self.times = [0] * (self.capacity + 1)
+
+        self.min_service2 = args.average_service[2]
+        self.max_service2 = args.average_service[3]
+        self.capacity2 = args.capacity[1]
+        self.number_servers2 = args.number_servers[1]
 
 
 def main():
@@ -147,27 +155,32 @@ def main():
 
     i = 1
     for queue in queues:
-        print('Queue 1:{}'.format(i))
-        print(' Times: {}'.format(queue.times))
+        print('Iteration: {}'.format(i))
+        print(' Queue 1 times: {}'.format(queue.times))
+        print(' loss queue 1: {}'.format(queue.loss))
+        print()
+        print(' Queue 2 times: {}'.format(queue.times2))
+        print(' loss queue 2: {}'.format(queue.loss2))
+        print()
         print(' Total time: {}'.format(round(queue.global_time, 4)))
-        print(' loss: {}'.format(queue.loss))
-        print()
-        print('Queue 2')
-        print(' Times: {}'.format(queue.times2))
-        # print(' Total time: {}'.format(round(queue.global_time, 4)))
-        # print(' loss: {}'.format(queue.loss))
-        print()
         print('=' * 50)
         i += 1
 
-    # average_times = [0] * (queues[0].capacity + 1)
-    # for i in range(len(average_times)):
-    #     for queue in queues:
-    #         average_times[i] += queue.times[i]
-    #         average_times[i] = round((average_times[i] / len(queues)), 4)
+    average_times = [0] * (queues[0].capacity + 1)
+    for i in range(len(average_times)):
+        for queue in queues:
+            average_times[i] += queue.times[i]
+            average_times[i] = round((average_times[i] / len(queues)), 4)
 
-    # print('Average times: {}'.format(average_times))
-    # print('Average total time: {}'.format(round(sum(average_times), 4)))
+    average_times2 = [0] * (queues[0].capacity2 + 1)
+    for i in range(len(average_times2)):
+        for queue in queues:
+            average_times2[i] += queue.times2[i]
+            average_times2[i] = round((average_times2[i] / len(queues)), 4)
+
+    print('Average time queue 1: {}'.format(average_times))
+    print('Average time queue 2: {}'.format(average_times2))
+    print('Average total time: {}'.format(round(sum(average_times), 4)))
 
 
 if __name__ == '__main__':

@@ -20,6 +20,7 @@ class Queue():
         self.max_service = 0
         self.number_servers = 0
         self.capacity = 0
+        self.infinit_queue = False
         self.times = None
         self.weights = None
         self.loss = 0
@@ -30,13 +31,13 @@ class QueueSimulator():
 
     def __init__(self, seed):
         self.global_time = 0
-        self.iterations = 2000
+        self.iterations = 100000
         self.scheduler = []
         self.seed = seed
 
         self.__argument_parsing()
 
-        self.arrival(self.queues[0], 3.0)
+        self.arrival(self.queues[0], 1.0)
 
         while self.iterations > 0:
             next_event = self.scheduler.pop(0)
@@ -70,6 +71,13 @@ class QueueSimulator():
     def random_between(self, a, b):
         return (b - a) * self.next_random() + a
 
+    def update_queues_time(self, time):
+        for queue in self.queues:
+            # if (queue.population > len(queue.times)-1) and queue.infinit_queue:
+            #     queue.times.append(0)
+            queue.times[queue.population] += (time - self.global_time)
+        self.global_time = time
+
     def exit_schedule(self, q_sourc):
         ''' Exit schedule
             q_source: Index of queue source
@@ -80,10 +88,7 @@ class QueueSimulator():
         self.insert_event(exit_event)
 
     def exit(self, event):
-        # update queues time
-        for queue in self.queues:
-            queue.times[queue.population] += (event.time - self.global_time)
-        self.global_time = event.time
+        self.update_queues_time(event.time)
 
         queue_source = self.queues[event.queue_source]
 
@@ -103,12 +108,9 @@ class QueueSimulator():
         self.insert_event(entry_event)
 
     def arrival(self, queue, time):
-        # update queues time
-        for q in self.queues:
-            q.times[q.population] += (time - self.global_time)
-        self.global_time = time
+        self.update_queues_time(time)
 
-        if queue.population < queue.capacity:
+        if queue.population < queue.capacity-1:
             queue.population += 1
 
             if queue.population <= queue.number_servers:
@@ -130,10 +132,7 @@ class QueueSimulator():
         self.insert_event(passage_event)
 
     def passage_event(self, event):
-        # update queues time
-        for queue in self.queues:
-            queue.times[queue.population] += (event.time - self.global_time)
-        self.global_time = event.time
+        self.update_queues_time(event.time)
 
         queue_source = self.queues[event.queue_source]
         queue_destiny = self.queues[event.queue_destiny]
@@ -145,14 +144,13 @@ class QueueSimulator():
             q_dest = self.queues.index(random.choices(self.queues, queue_source.weights)[0])
             self.passage_schedule(q_source, q_dest)
 
-        if queue_destiny.population < queue_destiny.capacity:
+        if queue_destiny.population < queue_destiny.capacity-1:
             queue_destiny.population += 1
 
             if queue_destiny.population <= queue_destiny.number_servers:
                 q_source = self.queues.index(queue_destiny)
                 q_dest = self.queues.index(random.choices(self.queues, queue_destiny.weights)[0])
                 if q_source == q_dest:
-                    print(q_source, q_dest)
                     self.exit_schedule(q_source)
                 else:
                     self.passage_schedule(q_source, q_dest)
@@ -163,22 +161,28 @@ class QueueSimulator():
     def __argument_parsing(self):
         """! ArgumentParser routine"""
         parser = argparse.ArgumentParser(
-            usage='python3 queue_simulator.py -q 3 -a 1 4 0 0 0 0 -s 1 2 5 10 10 20 -n 1 3 2 -c 100 5 8 -w 0 0.8 0.2 0.3 0.2 0.5 0 0.7 0.3',
+            usage='python3 queue_simulator.py -q 3 -a 1 4 0 0 0 0 -s 1 1.5 5 10 10 20 -n 1 3 2 -c 100 5 8 -w 0 0.8 0.2 0.3 0.2 0.5 0 0.7 0.3',
             description='Queue simulator'
         )
         parser.add_argument('-q', '--number_of_queues', type=int, help='Number of queues.')
         parser.add_argument('-a', '--average-arrival',
-                            nargs='+', type=int, help='Average arrival time.')
+                            nargs='+', type=float,
+                            help='Average arrival time. One pair of float per queue.')
         parser.add_argument('-s', '--average-service',
-                            nargs='+', type=int, help='Average service time for queue 1 and 2.')
+                            nargs='+', type=float,
+                            help='Average service time. One pair of float per queue.')
         parser.add_argument('-n', '--number-servers', nargs='+',
-                            type=int, help='Number of servers for queue 1 and 2.')
+                            type=int, help='Number of servers. One integer per queue.')
         parser.add_argument('-c', '--capacity', nargs='+', type=int,
-                            help='Capacity of the queue 1 and 2.')
+                            help='Capacity of the queues. One interger per queue. 0 for infinite queue.')
         parser.add_argument('-w', '--weights', nargs='+', type=float,
                             help='Weights of outputs.')
 
         args = parser.parse_args()
+
+        # remove when infinit queue is implemented
+        if args.capacity[0] == 0:
+            args.capacity[0] = 10
 
         self.queues = [Queue() for _ in range(args.number_of_queues)]
 
@@ -190,6 +194,8 @@ class QueueSimulator():
             self.queues[i].max_service = args.average_service[i+1]
             self.queues[i].number_servers = args.number_servers[i]
             self.queues[i].capacity = args.capacity[i]
+            if self.queues[i].capacity == 0:
+                self.queues[i].infinit_queue = True
             self.queues[i].times = [0] * self.queues[i].capacity
             self.queues[i].weights = [0] * args.number_of_queues
             for j in range(args.number_of_queues):
@@ -201,43 +207,18 @@ class QueueSimulator():
 def main():
     simulation = QueueSimulator(666)
 
+    print('State       Times      Probability')
     for i in range(len(simulation.queues)):
-        print('Queue {}'.format(i+1))
-        print(' Times: {}'.format(simulation.queues[i].times))
-        print(' loss: {}'.format(simulation.queues[i].loss))
+        print('*' * 30)
+        print(f'Queue {i+1}')
+        print('-' * 30)
+        for j in range(len(simulation.queues[i].times)):
+            prob = simulation.queues[i].times[j]/sum(simulation.queues[i].times)
+            print(f'{j}        {simulation.queues[i].times[j]}        {prob:.2%}')
         print()
+        print(f'Number of losses: {simulation.queues[i].loss}')
+        print('*' * 30)
 
-    # queues = [QueueSimulator(10), QueueSimulator(209), QueueSimulator(666), QueueSimulator(5024),
-    #           QueueSimulator(9999)]
-
-    # i = 1
-    # for queue in queues:
-    #     print('Iteration: {}'.format(i))
-    #     print(' Queue 1 times: {}'.format(queue.queue1.times))
-    #     print(' loss queue 1: {}'.format(queue.queue1.loss))
-    #     print()
-    #     print(' Queue 2 times: {}'.format(queue.queue2.times))
-    #     print(' loss queue 2: {}'.format(queue.queue2.loss))
-    #     print()
-    #     print(' Total time: {}'.format(round(queue.global_time, 4)))
-    #     print('=' * 50)
-    #     i += 1
-
-    # average_times = [0] * (queues[0].queue1.capacity + 1)
-    # for i in range(len(average_times)):
-    #     for queue in queues:
-    #         average_times[i] += queue.queue1.times[i]
-    #         average_times[i] = round((average_times[i] / len(queues)), 4)
-
-    # average_times2 = [0] * (queues[0].queue2.capacity + 1)
-    # for i in range(len(average_times2)):
-    #     for queue in queues:
-    #         average_times2[i] += queue.queue2.times[i]
-    #         average_times2[i] = round((average_times2[i] / len(queues)), 4)
-
-    # print('Average time queue 1: {}'.format(average_times))
-    # print('Average time queue 2: {}'.format(average_times2))
-    # print('Average total time: {}'.format(round(sum(average_times), 4)))
 
 
 if __name__ == '__main__':

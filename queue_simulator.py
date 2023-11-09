@@ -73,8 +73,9 @@ class QueueSimulator():
 
     def update_queues_time(self, time):
         for queue in self.queues:
-            # if (queue.population > len(queue.times)-1) and queue.infinit_queue:
-            #     queue.times.append(0)
+            if (queue.population > queue.capacity-1) and queue.infinit_queue:
+                queue.times.append(0)
+                queue.capacity += 1
             queue.times[queue.population] += (time - self.global_time)
         self.global_time = time
 
@@ -110,7 +111,7 @@ class QueueSimulator():
     def arrival(self, queue, time):
         self.update_queues_time(time)
 
-        if queue.population < queue.capacity-1:
+        if queue.population < queue.capacity:
             queue.population += 1
 
             if queue.population <= queue.number_servers:
@@ -144,7 +145,7 @@ class QueueSimulator():
             q_dest = self.queues.index(random.choices(self.queues, queue_source.weights)[0])
             self.passage_schedule(q_source, q_dest)
 
-        if queue_destiny.population < queue_destiny.capacity-1:
+        if queue_destiny.population < queue_destiny.capacity:
             queue_destiny.population += 1
 
             if queue_destiny.population <= queue_destiny.number_servers:
@@ -180,10 +181,6 @@ class QueueSimulator():
 
         args = parser.parse_args()
 
-        # remove when infinit queue is implemented
-        if args.capacity[0] == 0:
-            args.capacity[0] = 10
-
         self.queues = [Queue() for _ in range(args.number_of_queues)]
 
         k = 0
@@ -196,7 +193,7 @@ class QueueSimulator():
             self.queues[i].capacity = args.capacity[i]
             if self.queues[i].capacity == 0:
                 self.queues[i].infinit_queue = True
-            self.queues[i].times = [0] * self.queues[i].capacity
+            self.queues[i].times = [0] * (self.queues[i].capacity + 1)
             self.queues[i].weights = [0] * args.number_of_queues
             for j in range(args.number_of_queues):
                 self.queues[i].weights[j] = args.weights[k]

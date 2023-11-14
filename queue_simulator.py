@@ -221,15 +221,13 @@ class QueueSimulator():
 def main():
     simulation = QueueSimulator(1254867)
     i = 1
-    out = 'Out'
-    q_string = 'Q'
     for q in simulation.queues:
         print('*' * 40)
         print(f'Queue {i}: (G/G/{q.number_servers}/{q.capacity})')
         print(f'Arrival time: {q.min_arrival} - {q.max_arrival}')
         print(f'Service time: {q.min_service} - {q.max_service}')
         print('Weights of Networks:')
-        print(f'  {" ".join([f"{q.weights[k]:.2%}({q_string+str(k) if k != (i-1) else out})" for k in range(len(q.weights))])}')
+        print(f'  {" ".join([str(w)+(f"(Q{k+1})" if k+1 != i else "(Out)") for k, w in enumerate(q.weights)])}')
         print('-' * 40)
         print(f'{"State":<10}{"Times":<15}{"Probability":<15}')
         for j in range(len(q.times)):

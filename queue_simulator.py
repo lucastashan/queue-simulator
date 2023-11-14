@@ -10,6 +10,7 @@ class Event(object):
         self.queue_source = queue_source
         self.queue_destiny = queue_destiny
 
+    # print for debugging purpose
     def print_props(self):
         print(f'Type: {self.event_type} - Time: {self.time} - Queue source: {self.queue_source} - Queue destiny: {self.queue_destiny}')
 
@@ -73,7 +74,6 @@ class QueueSimulator():
 
     def random_between(self, a, b):
         rand = (b - a) * self.next_random() + a
-        # print(f'a: {a}, b: {b}, Random: {rand}')
         return rand
 
     def update_queues_time(self, time):
@@ -104,7 +104,6 @@ class QueueSimulator():
             else:
                 self.passage_schedule(event.queue_source, q_dest)
 
-    # DEBUGADO
     def arrival_schedule(self):
         entry_event = Event('arrival', self.global_time +
                             self.random_between(self.queues[0].min_arrival, self.queues[0].max_arrival))
@@ -113,8 +112,8 @@ class QueueSimulator():
     def arrival(self, queue, time):
         self.update_queues_time(time)
 
-        # if queue is full and infinit queue
-        if (queue.population == queue.capacity) and queue.infinit_queue:
+        # if the queue is infinit, increase the capacity
+        if queue.infinit_queue and (queue.population == queue.capacity):
             queue.times.append(0)
             queue.capacity += 1
 
@@ -129,7 +128,6 @@ class QueueSimulator():
             queue.loss += 1
         self.arrival_schedule()
 
-    # DEBUGADO
     def passage_schedule(self, q_source, q_dest):
         ''' Passage schedule
             q_source: Index of queue source
@@ -156,7 +154,7 @@ class QueueSimulator():
             else:
                 self.passage_schedule(q_source, q_dest)
 
-        # if queue is full and infinit queue
+        # if the destiny queue is infinit, increase the capacity
         if queue_destiny.population >= queue_destiny.capacity and queue_destiny.infinit_queue:
             queue_destiny.times.append(0)
             queue_destiny.capacity += 1
@@ -196,14 +194,8 @@ class QueueSimulator():
                             help='Weights of outputs.')
 
         args = parser.parse_args()
-        # args.number_of_queues = 3
-        # args.average_arrival = [1, 4, 0, 0, 0, 0]
-        # args.average_service = [1, 1.5, 5, 10, 10, 20]
-        # args.number_servers = [1, 3, 2]
-        # args.capacity = [0, 5, 8]
-        # args.weights = [0, 0.8, 0.2, 0.3, 0.2, 0.5, 0, 0.7, 0.3]
 
-        self.queues = [Queue() for i in range(args.number_of_queues)]
+        self.queues = [Queue() for _ in range(args.number_of_queues)]
 
         i = 0
         for q in self.queues:
@@ -227,22 +219,29 @@ class QueueSimulator():
 
 
 def main():
-    simulation = QueueSimulator(666)
-    print('State       Times      Probability')
-    for i in range(len(simulation.queues)):
-        print('*' * 30)
-        print(f'Queue {i+1}')
-        print('-' * 30)
-        for j in range(len(simulation.queues[i].times)):
-            prob = simulation.queues[i].times[j]/sum(simulation.queues[i].times)
-            print(f'{j}        {simulation.queues[i].times[j]}        {prob:.2%}')
+    simulation = QueueSimulator(1254867)
+    i = 1
+    out = 'Out'
+    q_string = 'Q'
+    for q in simulation.queues:
+        print('*' * 40)
+        print(f'Queue {i}: (G/G/{q.number_servers}/{q.capacity})')
+        print(f'Arrival time: {q.min_arrival} - {q.max_arrival}')
+        print(f'Service time: {q.min_service} - {q.max_service}')
+        print('Weights of Networks:')
+        print(f'  {" ".join([f"{q.weights[k]:.2%}({q_string+str(k) if k != (i-1) else out})" for k in range(len(q.weights))])}')
+        print('-' * 40)
+        print(f'{"State":<10}{"Times":<15}{"Probability":<15}')
+        for j in range(len(q.times)):
+            prob = q.times[j]/sum(q.times)
+            print(f'{j:<10}{q.times[j]:<15}{prob:.2%}')
         print()
-        print(f'Number of losses: {simulation.queues[i].loss}')
-        print('*' * 30)
+        print(f'Number of losses: {q.loss}')
+        i += 1
 
-    print('=' * 50)
+    print('=' * 40)
     print(f'Simulation time: {round(simulation.global_time, 2)}')
-    print('=' * 50)
+    print('=' * 40)
 
 
 if __name__ == '__main__':

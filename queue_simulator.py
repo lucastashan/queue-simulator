@@ -98,6 +98,7 @@ class QueueSimulator():
         queue_source.population -= 1
         if queue_source.population >= queue_source.number_servers:
             q_dest = self.queues.index(random.choices(self.queues, queue_source.weights)[0])
+            self.iterations -= 1
 
             if event.queue_source == q_dest:
                 self.exit_schedule(event.queue_source)
@@ -123,6 +124,7 @@ class QueueSimulator():
             if queue.population <= queue.number_servers:
                 q_source = self.queues.index(queue)
                 q_dest = self.queues.index(random.choices(self.queues, queue.weights)[0])
+                self.iterations -= 1
                 self.passage_schedule(q_source, q_dest)
         else:
             queue.loss += 1
@@ -149,6 +151,7 @@ class QueueSimulator():
         if queue_source.population >= queue_source.number_servers:
             q_source = self.queues.index(queue_source)
             q_dest = self.queues.index(random.choices(self.queues, queue_source.weights)[0])
+            self.iterations -= 1
             if q_source == q_dest:
                 self.exit_schedule(q_source)
             else:
